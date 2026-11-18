@@ -29,12 +29,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * Tests de bout en bout de l'API (H2 en mode PostgreSQL + vraies migrations Flyway).
  * Chaque test est annulé (rollback) à la fin : ils sont indépendants.
+ * Suffixe "IT" : exécuté par maven-failsafe (phase integration-test), rapport séparé des tests unitaires.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @Transactional
-class ApiIntegrationTest {
+class ApiIT {
 
     private static final String ADMIN_EMAIL = "admin@test.dolcecandela.tn";
     private static final String ADMIN_PASSWORD = "Admin-Test-Password-123";
@@ -176,7 +177,7 @@ class ApiIntegrationTest {
     }
 
     @Test
-    void personalizedOrderNeedsDepositBeforeConfirmation() throws Exception {
+    void smallPersonalizedOrderCanBeConfirmedWithoutDeposit() throws Exception {
         JsonNode order = createOrder(Map.of(
                 "customerName", "Sarra", "customerPhone", "55111222",
                 "items", List.of(Map.of(
@@ -187,7 +188,24 @@ class ApiIntegrationTest {
 
         assertThat(order.get("deliveryFee").decimalValue()).isEqualByComparingTo("0");
         assertThat(order.get("total").decimalValue()).isEqualByComparingTo("89");
-        assertThat(order.get("depositAmount").decimalValue()).isEqualByComparingTo("26.7");
+        assertThat(order.get("depositAmount").decimalValue()).isEqualByComparingTo("0");
+
+        mvc.perform(patch("/api/admin/orders/" + order.get("id").asLong() + "/status")
+                        .header("Authorization", "Bearer " + adminToken())
+                        .contentType(MediaType.APPLICATION_JSON).content(body(Map.of("status", "CONFIRMED"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("CONFIRMED"));
+    }
+
+    @Test
+    void largeOrderNeedsDepositBeforeConfirmation() throws Exception {
+        JsonNode order = createOrder(Map.of(
+                "customerName", "Sarra", "customerPhone", "55111222",
+                "items", List.of(Map.of("productId", productId("bouquet-roses-mariee"), "quantity", 10)),
+                "delivery", Map.of("method", "PICKUP")));
+
+        assertThat(order.get("total").decimalValue()).isEqualByComparingTo("890");
+        assertThat(order.get("depositAmount").decimalValue()).isEqualByComparingTo("267");
 
         long id = order.get("id").asLong();
         String admin = "Bearer " + adminToken();
@@ -200,9 +218,9 @@ class ApiIntegrationTest {
         // Acompte reçu
         mvc.perform(post("/api/admin/orders/" + id + "/payments").header("Authorization", admin)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(body(Map.of("type", "DEPOSIT", "method", "D17", "amount", 26.7))))
+                        .content(body(Map.of("type", "DEPOSIT", "method", "D17", "amount", 267))))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.balanceDue").value(62.3));
+                .andExpect(jsonPath("$.balanceDue").value(623.0));
 
         mvc.perform(patch("/api/admin/orders/" + id + "/status").header("Authorization", admin)
                         .contentType(MediaType.APPLICATION_JSON).content(body(Map.of("status", "CONFIRMED"))))

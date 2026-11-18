@@ -13,22 +13,28 @@ Le front Angular (FR / AR / EN) viendra se brancher dessus.
 cp .env.example .env        # puis remplacer toutes les valeurs "change-me"
 docker compose up --build
 ```
-- API : http://localhost:8080
-- Documentation Swagger : http://localhost:8080/swagger-ui.html
-- Santé : http://localhost:8080/actuator/health
+- API : http://localhost:8081
+- Documentation Swagger : http://localhost:8081/swagger-ui.html
+- Santé : http://localhost:8081/actuator/health
 
 ### Sans Docker (développement)
 PostgreSQL doit tourner en local, avec une base `dolce_candela`.
 ```bash
 export DB_PASSWORD=... JWT_SECRET=$(openssl rand -base64 48)
 export ADMIN_EMAIL=admin@dolcecandela.tn ADMIN_PASSWORD=MotDePasseAdminSolide1
-mvn spring-boot:run
+mvnw.cmd spring-boot:run
 ```
 
 ### Tests
 ```bash
-mvn verify      # tests unitaires + tests d'intégration (H2 en mode PostgreSQL) + rapport JaCoCo
+mvnw.cmd test                 # tests unitaires (*Test.java)      → target/surefire-reports
+mvnw.cmd verify               # + tests d'intégration (*IT.java) → target/failsafe-reports + couverture JaCoCo
 ```
+(Le Maven Wrapper `mvnw` s'ajoute une fois : voir `docs/J1-guide.md`, étape 1.)
+
+### Travail en équipe et CI
+- Stratégie de branches et règles : [`CONTRIBUTING.md`](CONTRIBUTING.md)
+- Mise en place Git + Jenkins + webhook (jalon J1) : [`docs/J1-guide.md`](docs/J1-guide.md)
 
 ---
 
@@ -61,7 +67,7 @@ Pour ajouter une évolution, créez `V3__description.sql`. Ne modifiez jamais un
 | Règle | Où |
 |---|---|
 | Livraison **8 DT**, retrait gratuit | `app.business.delivery-fee` |
-| **Acompte de 30 %** pour toute commande personnalisée (options, texte ou création sur mesure) | `app.business.deposit-percent` |
+| **Acompte de 30 %** uniquement pour les grandes quantités (≥ 10 articles au total) | `app.business.deposit-percent`, `deposit-min-quantity` |
 | Une commande ne passe en `CONFIRMED` que si l'acompte est payé | `OrderService.updateStatus` |
 | Stock décrémenté à la commande, puis remis en stock en cas d'annulation (sauf produits « faits sur commande ») | `Product.decreaseStock` |
 | Commande sur mesure : prix fixé par l'admin (devis), puis calcul de l'acompte | `PATCH /api/admin/orders/{id}/quote` |

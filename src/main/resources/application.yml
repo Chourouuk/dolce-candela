@@ -61,7 +61,8 @@ app:
     full-name: ${ADMIN_FULL_NAME:Administrateur Dolce Candela}
   business:
     delivery-fee: 8.000             # frais de livraison (DT)
-    deposit-percent: 30             # acompte demandé sur les commandes personnalisées (%)
+    deposit-percent: 30             # pourcentage de l'acompte (%)
+    deposit-min-quantity: 10        # acompte exigé seulement à partir de cette quantité totale d'articles
     pickup-location: "Centre-ville de Monastir"
   storage:
     upload-dir: ${UPLOAD_DIR:./uploads}

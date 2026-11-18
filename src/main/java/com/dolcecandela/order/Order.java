@@ -135,9 +135,9 @@ public class Order {
         payments.add(payment);
     }
 
-    /** Un acompte est exigé pour les commandes sur mesure ou contenant au moins un article personnalisé. */
-    public boolean requiresDeposit() {
-        return type == OrderType.CUSTOM || items.stream().anyMatch(OrderItem::isPersonalized);
+    /** Nombre total d'articles de la commande (toutes lignes confondues). */
+    public int totalQuantity() {
+        return items.stream().mapToInt(OrderItem::getQuantity).sum();
     }
 
     public BigDecimal amountPaid() {

@@ -40,6 +40,7 @@ public record AppProperties(
     public record Business(
             @NotNull BigDecimal deliveryFee,
             @Min(0) @Max(100) int depositPercent,
+            @Min(1) int depositMinQuantity,
             @NotBlank String pickupLocation) {
     }
 

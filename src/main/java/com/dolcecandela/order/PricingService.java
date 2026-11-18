@@ -20,10 +20,12 @@ public class PricingService {
 
     private final BigDecimal deliveryFee;
     private final BigDecimal depositPercent;
+    private final int depositMinQuantity;
 
     public PricingService(AppProperties properties) {
         this.deliveryFee = Money.of(properties.business().deliveryFee());
         this.depositPercent = BigDecimal.valueOf(properties.business().depositPercent());
+        this.depositMinQuantity = properties.business().depositMinQuantity();
     }
 
     /** Prix unitaire = prix du produit + suppléments des options choisies. */
@@ -63,7 +65,12 @@ public class PricingService {
             order.getDelivery().setFee(fee);
         }
         order.setTotal(total);
-        // Pas d'acompte tant que le prix d'une commande sur mesure n'est pas fixé
-        order.setDepositAmount(order.isQuoted() && order.requiresDeposit() ? deposit(total) : Money.zero());
+        // Acompte uniquement pour les grandes quantités, et pas tant que le prix d'une commande sur mesure n'est pas fixé
+        order.setDepositAmount(order.isQuoted() && requiresDeposit(order) ? deposit(total) : Money.zero());
+    }
+
+    /** L'acompte n'est exigé qu'à partir d'une certaine quantité totale (10 articles par défaut). */
+    public boolean requiresDeposit(Order order) {
+        return order.totalQuantity() >= depositMinQuantity;
     }
 }

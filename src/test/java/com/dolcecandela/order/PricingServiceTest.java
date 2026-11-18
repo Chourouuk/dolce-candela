@@ -17,7 +17,7 @@ class PricingServiceTest {
             new AppProperties.Jwt("x".repeat(32), 60),
             new AppProperties.Cors(List.of()),
             new AppProperties.Admin(null, null, null),
-            new AppProperties.Business(new BigDecimal("8.000"), 30, "Monastir"),
+            new AppProperties.Business(new BigDecimal("8.000"), 30, 10, "Monastir"),
             new AppProperties.Storage("target/x"),
             new AppProperties.Security(5, 15)));
 
@@ -50,16 +50,37 @@ class PricingServiceTest {
     }
 
     @Test
-    void personalizedOrderRequiresThirtyPercentDeposit() {
+    void smallPersonalizedOrderHasNoDeposit() {
         Order order = orderWith(DeliveryMethod.PICKUP, "89.000", 1, true);
         pricing.recalculate(order);
         assertThat(order.getTotal()).isEqualByComparingTo("89.000");
-        assertThat(order.getDepositAmount()).isEqualByComparingTo("26.700");
+        assertThat(order.getDepositAmount()).isEqualByComparingTo("0");
+    }
+
+    @Test
+    void largeQuantityRequiresThirtyPercentDeposit() {
+        Order order = orderWith(DeliveryMethod.PICKUP, "89.000", 10, false);
+        pricing.recalculate(order);
+        assertThat(order.getTotal()).isEqualByComparingTo("890.000");
+        assertThat(order.getDepositAmount()).isEqualByComparingTo("267.000");
+    }
+
+    @Test
+    void depositThresholdCountsAllLines() {
+        Order order = orderWith(DeliveryMethod.PICKUP, "42.000", 6, false);
+        OrderItem second = new OrderItem();
+        second.setProductName("Test 2");
+        second.setUnitPrice(new BigDecimal("39.000"));
+        second.setQuantity(4);
+        order.addItem(second);
+        pricing.recalculate(order);
+        assertThat(order.getTotal()).isEqualByComparingTo("408.000");
+        assertThat(order.getDepositAmount()).isEqualByComparingTo("122.400");
     }
 
     @Test
     void customOrderWithoutQuoteHasNoDepositYet() {
-        Order order = orderWith(DeliveryMethod.DELIVERY, "0", 3, true);
+        Order order = orderWith(DeliveryMethod.DELIVERY, "0", 20, true);
         order.setType(OrderType.CUSTOM);
         order.setQuoted(false);
         pricing.recalculate(order);
